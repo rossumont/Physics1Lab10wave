@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Water Waves</title>
+<style>
+:root{--bg:#0B1A2B;--fg:#F2EEE3;--mut:#8FA0B3;--g:#7FD4A8;--a:#E8B23A;--line:rgba(255,255,255,.14);--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI","Noto Sans Thai",Sarabun,Tahoma,sans-serif;overflow:hidden}
+body{background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:24px 24px}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;padding:10px 12px calc(6px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:flex-start;gap:8px}
+header .t{flex:1;min-width:0}
+h1{font-size:clamp(16px,2.4vw,22px);font-weight:700;line-height:1.25}
+.sub{color:var(--mut);font-size:13px;margin-top:2px}
+.btn{background:transparent;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn:hover{border-color:var(--mut)}
+.btn.go{border-color:var(--g);color:var(--g)}
+.btn.am{border-color:var(--a);color:var(--a)}
+.row{display:flex;gap:6px;align-items:center;overflow-x:auto;margin-top:8px;scrollbar-width:none}
+.row::-webkit-scrollbar{display:none}
+.lbl{color:var(--mut);font-size:12px;font-family:var(--mono);white-space:nowrap;margin:0 2px 0 4px}
+.chip{border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--fg);border-radius:999px;padding:5px 11px;font-family:var(--mono);font-size:13px;cursor:pointer;white-space:nowrap}
+.chip.on{border-color:var(--g);color:var(--g);background:rgba(127,212,168,.09)}
+.chip.part{font-family:inherit;font-size:12px;padding:4px 10px}
+.chip.part.on{border-color:var(--a);color:var(--a);background:rgba(232,178,58,.08)}
+.sep{width:1px;height:20px;background:var(--line);margin:0 4px;flex:none}
+#stage{flex:1;min-height:0;margin-top:8px;position:relative}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.credit{color:var(--mut);font-size:11px;text-align:center;margin-top:6px}
+.mask{position:fixed;inset:0;background:rgba(3,10,18,.78);display:none;align-items:center;justify-content:center;z-index:10;padding:14px}
+.mask.show{display:flex}
+.card{background:#10243A;border:1px solid var(--line);border-radius:12px;padding:16px;width:min(520px,100%);max-height:92vh;overflow:auto}
+.card h2{font-size:16px;margin-bottom:10px}
+.card h3{font-size:13px;color:var(--a);margin:14px 0 6px;font-weight:600}
+.card input{width:100%;background:#0B1A2B;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px;font-size:14px;font-family:var(--mono);margin:4px 0}
+.card table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px}
+.card td,.card th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
+.card th{color:var(--mut);font-weight:400}
+.msg{font-size:12px;color:var(--a);min-height:16px;margin-top:4px}
+.small{font-size:12px;color:var(--mut)}
+.right{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="t">
+      <h1 data-k="title"></h1>
+      <div class="sub" data-k="sub"></div>
+    </div>
+    <button class="btn" id="langBtn">ไทย</button>
+    <button class="btn" id="tBtn" data-k="teacher"></button>
+  </header>
+
+  <div class="row" id="rowPart">
+    <button class="chip part" data-part="5" data-k="p5"></button>
+    <button class="chip part" data-part="3" data-k="p3"></button>
+    <button class="chip part" data-part="4" data-k="p4"></button>
+    <button class="chip part" data-part="1" data-k="p1"></button>
+    <button class="chip part" data-part="2" data-k="p2"></button>
+  </div>
+  <div class="row" id="rowF"></div>
+  <div class="row" id="rowX"></div>
+
+  <div id="stage"><canvas id="cv"></canvas></div>
+
+  <div class="bar">
+    <button class="btn am" id="runBtn"></button>
+    <button class="btn" id="rulerBtn" data-k="ruler"></button>
+    <button class="btn" id="proBtn" data-k="pro"></button>
+  </div>
+  <div class="credit" data-k="credit"></div>
+</div>
+
+<!-- Teacher modal -->
+<div class="mask" id="mask">
+  <div class="card">
+    <div id="pwBox">
+      <h2 data-k="teacher"></h2>
+      <input type="password" id="pwIn" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="msg" id="pwMsg"></div>
+      <div class="right">
+        <button class="btn" data-close data-k="close"></button>
+        <button class="btn go" id="pwOk">OK</button>
+      </div>
+    </div>
+    <div id="tBox" style="display:none">
+      <h2 data-k="teacher"></h2>
+
+      <h3 data-k="speed"></h3>
+      <div class="row" id="rowV" style="margin-top:0"></div>
+
+      <h3 data-k="answer"></h3>
+      <table id="ansTbl"></table>
+      <table id="ans2" style="margin-top:8px"></table>
+      <div class="row" style="margin-top:8px">
+        <button class="chip" id="nodalBtn" data-k="nodal"></button>
+      </div>
+
+      <h3 data-k="link"></h3>
+      <div class="small" data-k="linkNote"></div>
+      <input type="text" id="linkOut" readonly>
+      <div class="right" style="margin-top:4px;justify-content:flex-start">
+        <button class="btn go" id="linkGen" data-k="gen"></button>
+        <button class="btn" id="linkCopy" data-k="copy"></button>
+      </div>
+
+      <h3 data-k="chpw"></h3>
+      <input type="email" id="cEmail" placeholder="email" autocapitalize="off">
+      <input type="password" id="cPass" placeholder="account password">
+      <input type="password" id="cNew" placeholder="new teacher password">
+      <div class="msg" id="cMsg"></div>
+      <div class="right" style="justify-content:flex-start;margin-top:4px">
+        <button class="btn" id="cBtn" data-k="save"></button>
+      </div>
+
+      <div class="right">
+        <button class="btn go" data-close data-k="close"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- text ---------- */
+const T={
+ en:{title:"Water Waves",sub:"Ripple tank",teacher:"Teacher",
+  p1:"Part 4 · Interference",p2:"Part 5 · Diffraction",p3:"Part 2 · Reflection",p4:"Part 3 · Refraction",p5:"Part 1 · Wave speed",depth:"depth",deep:"deep",mid:"medium",shal:"shallow",bar:"barrier",ang:"angle",dep:"shallow",pro:"Protractor",pos:"position",
+  f:"f (Hz)",d:"d (cm)",w:"gap (cm)",single:"Single",double:"Double",
+  freeze:"❚❚ Freeze",run:"▶ Run",ruler:"Ruler",close:"Close",
+  credit:"Asst.Prof.Dr. Rossumont Jaryabhand · Rajamangala University of Technology Tawan-ok, Uthenthawai Campus · No Right Reserved",
+  speed:"Wave speed v (cm/s)",answer:"Answer key  λ = v / f",nodal:"Show theory lines",
+  link:"Student link",linkNote:"The link locks the wave speed you selected.",gen:"Create link",copy:"Copy",
+  chpw:"Change teacher password",save:"Save",wrong:"Wrong password",saved:"Password changed",bad:"Email or account password incorrect",
+  copied:"Copied",locked:"Opened from a student link"},
+ th:{title:"คลื่นน้ำ",sub:"ถาดคลื่น",teacher:"ครู",
+  p1:"ตอนที่ 4 · การแทรกสอด",p2:"ตอนที่ 5 · การเลี้ยวเบน",p3:"ตอนที่ 2 · การสะท้อน",p4:"ตอนที่ 3 · การหักเห",p5:"ตอนที่ 1 · อัตราเร็วคลื่น",depth:"ความลึก",deep:"ลึก",mid:"กลาง",shal:"ตื้น",bar:"แผ่นกั้น",ang:"มุม",dep:"น้ำตื้น",pro:"ไม้โปรแทรกเตอร์",pos:"ตำแหน่ง",
+  f:"f (Hz)",d:"d (cm)",w:"ช่อง (cm)",single:"ช่องเดี่ยว",double:"ช่องคู่",
+  freeze:"❚❚ หยุดภาพ",run:"▶ เดินคลื่น",ruler:"ไม้บรรทัด",close:"ปิด",
+  credit:"ผศ.ดร.รสสุมนต์ จารยะพันธุ์ · มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก อุเทนถวาย · ไม่สงวนลิขสิทธิ์",
+  speed:"อัตราเร็วคลื่น v (cm/s)",answer:"เฉลย  λ = v / f",nodal:"แสดงเส้นตามทฤษฎี",
+  link:"ลิงก์สำหรับนักศึกษา",linkNote:"ลิงก์จะล็อกอัตราเร็วคลื่นที่เลือกไว้",gen:"สร้างลิงก์",copy:"คัดลอก",
+  chpw:"เปลี่ยนรหัสผ่านครู",save:"บันทึก",wrong:"รหัสผ่านไม่ถูกต้อง",saved:"เปลี่ยนรหัสผ่านแล้ว",bad:"อีเมลหรือรหัสบัญชีไม่ถูกต้อง",
+  copied:"คัดลอกแล้ว",locked:"เปิดจากลิงก์นักศึกษา"}
+};
+
+/* ---------- state ---------- */
+const FS=[8,10,12,15,20], DS=[3,4,5,6,8], WS=[1,2,3,4,6], VS=[18,22,26,30];
+const S={part:5,f:10,d:5,w:2,gaps:1,v:22,run:true,ruler:true,nodal:false,lang:"en",teacher:false,pos:1,dep:"A",pro:true,dp5:0};
+const DP5=[1,0.8,0.6]; const vEff=()=>S.part===5?S.v*DP5[S.dp5]:S.v;
+const ANG=[20,30,40,50,60], DEP={A:0.5,B:0.65,C:0.8};
+const W=40,H=25,DX=0.1,NX=400,NY=250;
+const H1={P:{x:30,y:5}}, RUL={1:{A:{x:16,y:22},B:{x:28,y:22}},2:{A:{x:16,y:4},B:{x:26,y:4}},3:{A:{x:3,y:23.5},B:{x:13,y:23.5}},4:{A:{x:3,y:23.5},B:{x:13,y:23.5}},5:{A:{x:10,y:12.5},B:{x:25,y:12.5}}};
+const PRO={3:{V:{x:33,y:21},M:{x:38,y:21},N:{x:33,y:16}},4:{V:{x:33,y:21},M:{x:38,y:21},N:{x:33,y:16}}};
+const R3={yc:17,bw:8,px:24},R4={px:20};
+function geo(){const th=ANG[S.pos-1]*Math.PI/180,n={x:Math.cos(th),y:Math.sin(th)};
+  const r=DEP[S.dep],t2=Math.asin(Math.min(1,r*Math.sin(th))),tt={x:Math.sin(th),y:-Math.cos(th)};
+  return {th,n,r,t2,k2:{x:Math.cos(t2)*n.x+Math.sin(t2)*tt.x,y:Math.cos(t2)*n.y+Math.sin(t2)*tt.y},kr:{x:-Math.cos(2*th),y:-Math.sin(2*th)}}}
+const XB=12,TH=0.4,GEN=1.0,YC=H/2;
+
+/* ---------- password ---------- */
+const DEF_PW="9;5:4*5‘", ACC_E="rossumont@gmail.com", ACC_P="LhaMoAPL9545=", PWKEY="wwave_pw";
+const norm=s=>String(s).trim().replace(/[‘’‚‛`´']/g,"'").replace(/[“”]/g,'"');
+function getPw(){try{return localStorage.getItem(PWKEY)||DEF_PW}catch(e){return DEF_PW}}
+
+/* ---------- student link ---------- */
+function rnd(n){const c="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";let s="";const a=new Uint8Array(n);crypto.getRandomValues(a);for(const b of a)s+=c[b%c.length];return s}
+function enc(o){return rnd(12)+btoa(JSON.stringify(o)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function dec(t){try{let b=t.slice(12).replace(/-/g,"+").replace(/_/g,"/");while(b.length%4)b+="=";return JSON.parse(atob(b))}catch(e){return null}}
+let lockedLink=false;
+(function(){const k=new URLSearchParams(location.search).get("k");if(!k)return;const o=dec(k);if(o&&VS.includes(o.v)){S.v=o.v;lockedLink=true}})();
+
+/* ---------- field ---------- */
+const C=new Float32Array(NX*NY), SN=new Float32Array(NX*NY);
+function gapList(){
+  const w=S.w;
+  if(S.gaps===1) return [[YC-w/2,YC+w/2]];
+  const D=w+4; return [[YC-D/2-w/2,YC-D/2+w/2],[YC+D/2-w/2,YC+D/2+w/2]];
+}
+function build(){
+  const lam=vEff()/S.f,k=2*Math.PI/lam;
+  C.fill(0);SN.fill(0);
+  if(S.part===1){
+    const src=[[5,YC-S.d/2],[5,YC+S.d/2]];
+    for(let j=0;j<NY;j++){const y=(j+.5)*DX;
+      for(let i=0;i<NX;i++){const x=(i+.5)*DX,id=j*NX+i;let c=0,s=0;
+        for(const p of src){const r=Math.hypot(x-p[0],y-p[1]);if(r<0.15)continue;
+          const a=Math.sqrt(1.5/(r+0.5)),ph=k*r;c+=a*Math.sin(ph);s+=a*Math.cos(ph)}
+        C[id]=c;SN[id]=s}}
+  }else if(S.part===3){
+    const g=geo(),n=g.n,px=R3.px,py=R3.yc;
+    const inc=(qx,qy)=>{if(qx<GEN+0.2)return 0;return 0.5*(1-Math.tanh((Math.abs(qy-R3.yc)-R3.bw/2)/0.5))};
+    for(let j=0;j<NY;j++){const y=(j+.5)*DX;
+      for(let i=0;i<NX;i++){const x=(i+.5)*DX,id=j*NX+i;
+        const dn=n.x*(x-px)+n.y*(y-py);if(dn>=0)continue;
+        const mx=x-2*dn*n.x,my=y-2*dn*n.y;
+        const a1=inc(x,y),a2=inc(mx,my),p1=k*(x-px),p2=k*(mx-px);
+        C[id]=a1*Math.sin(p1)+a2*Math.sin(p2);SN[id]=a1*Math.cos(p1)+a2*Math.cos(p2)}}
+  }else if(S.part===5){
+    for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const x=(i+.5)*DX,id=j*NX+i;if(x<GEN+0.2)continue;const ph=k*(x-GEN);C[id]=Math.sin(ph);SN[id]=Math.cos(ph)}
+  }else if(S.part===4){
+    const g=geo(),n=g.n,px=R4.px,py=YC,k2=k/g.r;
+    for(let j=0;j<NY;j++){const y=(j+.5)*DX;
+      for(let i=0;i<NX;i++){const x=(i+.5)*DX,id=j*NX+i;
+        if(x<GEN+0.2)continue;
+        const dn=n.x*(x-px)+n.y*(y-py);
+        const ph=dn<0?k*(x-px):k2*(g.k2.x*(x-px)+g.k2.y*(y-py));
+        C[id]=Math.sin(ph);SN[id]=Math.cos(ph)}}
+  }else{
+    const pts=[];
+    for(const g of gapList()){const w=g[1]-g[0],n=Math.max(4,Math.ceil(w/(lam/8))),ds=w/n;
+      for(let m=0;m<n;m++)pts.push(g[0]+(m+.5)*ds,ds)}
+    const sx=XB+TH;
+    for(let j=0;j<NY;j++){const y=(j+.5)*DX;
+      for(let i=0;i<NX;i++){const x=(i+.5)*DX,id=j*NX+i;
+        if(x<GEN+0.2)continue;
+        if(x<XB){const ph=k*(x-XB);C[id]=Math.sin(ph);SN[id]=Math.cos(ph);continue}
+        if(x<sx)continue;
+        const dx=x-sx;let c=0,s=0;
+        for(let q=0;q<pts.length;q+=2){const dy=y-pts[q],r=Math.hypot(dx,dy)||1e-3;
+          const a=pts[q+1]*(1+dx/r)/2/Math.sqrt(lam*Math.max(r,0.05)),ph=k*r-Math.PI/4;
+          c+=a*Math.sin(ph);s+=a*Math.cos(ph)}
+        C[id]=c;SN[id]=s}}
+  }
+}
+
+/* ---------- colour map ---------- */
+const LUT=new Uint8Array(256*3);
+(function(){const lo=[5,16,30],mid=[30,70,94],hi=[214,238,232];
+  for(let i=0;i<256;i++){const t=i/255;let a,b,u;if(t<.5){a=lo;b=mid;u=t/.5}else{a=mid;b=hi;u=(t-.5)/.5;u=Math.pow(u,1.25)}
+    for(let c=0;c<3;c++)LUT[i*3+c]=Math.round(a[c]+(b[c]-a[c])*u)}})();
+
+/* ---------- canvas ---------- */
+const cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+const off=document.createElement("canvas");off.width=NX;off.height=NY;
+const octx=off.getContext("2d"),img=octx.createImageData(NX,NY);
+let sc=10,ox=0,oy=0,cw=0,ch=0;
+function resize(){
+  const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  cw=r.width;ch=r.height;cv.width=Math.round(cw*dpr);cv.height=Math.round(ch*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pad=4;sc=Math.min((cw-2*pad)/W,(ch-2*pad)/H);ox=(cw-W*sc)/2;oy=(ch-H*sc)/2;
+}
+const X=x=>ox+x*sc, Y=y=>oy+y*sc;
+
+let tAcc=0,last=performance.now();
+const FAPP=0.7; // apparent (stroboscope) frequency on screen
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;if(S.run)tAcc+=dt;
+  const wt=2*Math.PI*FAPP*tAcc,co=Math.cos(wt),si=Math.sin(wt),d=img.data;
+  for(let i=0,p=0;i<C.length;i++,p+=4){
+    let v=C[i]*co-SN[i]*si;v=1.5*v/(1+Math.abs(v));if(v>1)v=1;if(v<-1)v=-1;
+    const li=((v+1)*127.5)|0,l3=li*3;d[p]=LUT[l3];d[p+1]=LUT[l3+1];d[p+2]=LUT[l3+2];d[p+3]=255}
+  octx.putImageData(img,0,0);
+  ctx.clearRect(0,0,cw,ch);
+  ctx.imageSmoothingEnabled=true;ctx.drawImage(off,ox,oy,W*sc,H*sc);
+  overlay();
+  requestAnimationFrame(frame);
+}
+
+function txt(s,x,y,col,al){
+  ctx.font="13px "+getComputedStyle(document.body).getPropertyValue("--mono");
+  ctx.textAlign=al||"left";ctx.textBaseline="middle";
+  const w=ctx.measureText(s).width,bx=al==="center"?x-w/2:(al==="right"?x-w:x);
+  ctx.fillStyle="rgba(11,26,43,.82)";ctx.fillRect(bx-5,y-10,w+10,20);
+  ctx.fillStyle=col;ctx.fillText(s,x,y);
+}
+function handle(p,col){
+  ctx.beginPath();ctx.arc(X(p.x),Y(p.y),8,0,Math.PI*2);ctx.fillStyle="rgba(11,26,43,.6)";ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle=col;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(X(p.x)-12,Y(p.y));ctx.lineTo(X(p.x)+12,Y(p.y));ctx.moveTo(X(p.x),Y(p.y)-12);ctx.lineTo(X(p.x),Y(p.y)+12);
+  ctx.lineWidth=1;ctx.stroke();
+}
+function overlay(){
+  const mono=getComputedStyle(document.body).getPropertyValue("--mono");
+  ctx.strokeStyle="rgba(242,238,227,.35)";ctx.lineWidth=1;ctx.strokeRect(ox+.5,oy+.5,W*sc-1,H*sc-1);
+  // edge scales
+  ctx.strokeStyle="rgba(242,238,227,.55)";ctx.fillStyle="rgba(242,238,227,.7)";
+  ctx.font="10px "+mono;ctx.textAlign="center";ctx.textBaseline="bottom";
+  for(let c=0;c<=W;c++){const L=c%5===0?9:4;ctx.beginPath();ctx.moveTo(X(c),Y(H));ctx.lineTo(X(c),Y(H)-L);ctx.stroke();
+    if(c%5===0&&c>0&&c<W&&sc>6)ctx.fillText(c,X(c),Y(H)-10)}
+  ctx.textAlign="right";ctx.textBaseline="middle";
+  for(let c=0;c<=H;c++){const L=c%5===0?9:4;ctx.beginPath();ctx.moveTo(X(W),Y(c));ctx.lineTo(X(W)-L,Y(c));ctx.stroke();
+    if(c%5===0&&c>0&&c<H&&sc>6)ctx.fillText(c,X(W)-11,Y(c))}
+  const lam=S.v/S.f;
+  if(S.part===1){
+    const s1={x:5,y:YC-S.d/2},s2={x:5,y:YC+S.d/2};
+    if(S.teacher&&S.nodal){
+      ctx.save();ctx.beginPath();ctx.rect(ox,oy,W*sc,H*sc);ctx.clip();
+      ctx.strokeStyle="rgba(232,178,58,.85)";ctx.setLineDash([5,4]);ctx.lineWidth=1.2;
+      const cf=S.d/2;
+      for(let n=1;(n-.5)*lam<S.d;n++){const a=(n-.5)*lam/2,b=Math.sqrt(cf*cf-a*a);
+        for(const sg of[-1,1]){ctx.beginPath();for(let t=0;t<=4;t+=0.02){const px=5+b*Math.sinh(t),py=YC+sg*a*Math.cosh(t);t===0?ctx.moveTo(X(px),Y(py)):ctx.lineTo(X(px),Y(py))}ctx.stroke()}}
+      ctx.restore();ctx.setLineDash([]);
+    }
+    for(const [p,n] of [[s1,"S₁"],[s2,"S₂"]]){ctx.beginPath();ctx.arc(X(p.x),Y(p.y),5,0,Math.PI*2);ctx.fillStyle="#E8B23A";ctx.fill();
+      ctx.fillStyle="#F2EEE3";ctx.font="12px "+mono;ctx.textAlign="right";ctx.fillText(n,X(p.x)-9,Y(p.y))}
+    const P=H1.P;
+    ctx.setLineDash([4,4]);ctx.strokeStyle="rgba(232,178,58,.7)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(X(s1.x),Y(s1.y));ctx.lineTo(X(P.x),Y(P.y));ctx.moveTo(X(s2.x),Y(s2.y));ctx.lineTo(X(P.x),Y(P.y));ctx.stroke();ctx.setLineDash([]);
+    handle(P,"#E8B23A");
+    ctx.fillStyle="#E8B23A";ctx.font="12px "+mono;ctx.textAlign="left";ctx.fillText("P",X(P.x)+11,Y(P.y)-11);
+    const r1=Math.hypot(P.x-s1.x,P.y-s1.y),r2=Math.hypot(P.x-s2.x,P.y-s2.y);
+    txt("S₁P = "+r1.toFixed(1)+" cm   S₂P = "+r2.toFixed(1)+" cm",X(0)+30,Y(0)+18,"#E8B23A");
+  }else if(S.part===5){
+    ctx.fillStyle="#6F8094";ctx.fillRect(X(GEN-0.4),Y(0.3),0.4*sc,(H-0.6)*sc);
+  }else if(S.part===3||S.part===4){
+    const g=geo(),n=g.n,t={x:-n.y,y:n.x},p0=S.part===3?{x:R3.px,y:R3.yc}:{x:R4.px,y:YC};
+    ctx.save();ctx.beginPath();ctx.rect(ox,oy,W*sc,H*sc);ctx.clip();
+    if(S.part===3){
+      ctx.fillStyle="#6F8094";ctx.fillRect(X(GEN-0.4),Y(R3.yc-R3.bw/2),0.4*sc,R3.bw*sc);
+      ctx.strokeStyle="#B9C3CC";ctx.lineWidth=Math.max(3,0.4*sc);ctx.lineCap="round";
+      ctx.beginPath();ctx.moveTo(X(p0.x-13*t.x),Y(p0.y-13*t.y));ctx.lineTo(X(p0.x+13*t.x),Y(p0.y+13*t.y));ctx.stroke();ctx.lineCap="butt";
+    }else{
+      ctx.fillStyle="#6F8094";ctx.fillRect(X(GEN-0.4),Y(0.3),0.4*sc,(H-0.6)*sc);
+      const L=80;ctx.fillStyle="rgba(232,238,240,.07)";ctx.beginPath();
+      ctx.moveTo(X(p0.x-L*t.x),Y(p0.y-L*t.y));ctx.lineTo(X(p0.x+L*t.x),Y(p0.y+L*t.y));
+      ctx.lineTo(X(p0.x+L*t.x+L*n.x),Y(p0.y+L*t.y+L*n.y));ctx.lineTo(X(p0.x-L*t.x+L*n.x),Y(p0.y-L*t.y+L*n.y));ctx.closePath();ctx.fill();
+      ctx.strokeStyle="rgba(232,238,240,.45)";ctx.lineWidth=1;ctx.beginPath();
+      ctx.moveTo(X(p0.x-L*t.x),Y(p0.y-L*t.y));ctx.lineTo(X(p0.x+L*t.x),Y(p0.y+L*t.y));ctx.stroke();
+    }
+    if(S.teacher&&S.nodal){
+      ctx.strokeStyle="rgba(232,178,58,.85)";ctx.lineWidth=1.2;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(X(p0.x-8*n.x),Y(p0.y-8*n.y));ctx.lineTo(X(p0.x+8*n.x),Y(p0.y+8*n.y));ctx.stroke();ctx.setLineDash([]);
+      const out=S.part===3?g.kr:g.k2;ctx.lineWidth=2;ctx.beginPath();
+      ctx.moveTo(X(p0.x-10),Y(p0.y));ctx.lineTo(X(p0.x),Y(p0.y));ctx.lineTo(X(p0.x+10*out.x),Y(p0.y+10*out.y));ctx.stroke();
+    }
+    ctx.restore();
+  }else{
+    ctx.fillStyle="#6F8094";ctx.fillRect(X(GEN-0.4),Y(0.3),0.4*sc,(H-0.6)*sc);
+    ctx.fillStyle="#B9C3CC";
+    const gs=gapList();let y0=0;
+    for(const g of gs){ctx.fillRect(X(XB),Y(y0),TH*sc,(g[0]-y0)*sc);y0=g[1]}
+    ctx.fillRect(X(XB),Y(y0),TH*sc,(H-y0)*sc);
+    if(S.teacher&&S.nodal){
+      ctx.save();ctx.beginPath();ctx.rect(X(XB+TH),oy,(W-XB-TH)*sc,H*sc);ctx.clip();
+      ctx.strokeStyle="rgba(232,178,58,.85)";ctx.setLineDash([5,4]);ctx.lineWidth=1.2;
+      const sp=S.gaps===1?S.w:S.w+4,off=S.gaps===1?0:.5;
+      for(let n=1;(n-off)*lam/sp<1;n++){const th=Math.asin((n-off)*lam/sp),L=60;
+        for(const sg of[-1,1]){ctx.beginPath();ctx.moveTo(X(XB+TH),Y(YC));ctx.lineTo(X(XB+TH+L*Math.cos(th)),Y(YC+sg*L*Math.sin(th)));ctx.stroke()}}
+      ctx.restore();ctx.setLineDash([]);
+    }
+  }
+  if(S.ruler){
+    const R=RUL[S.part],A=R.A,B=R.B;
+    ctx.strokeStyle="#7FD4A8";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(A.x),Y(A.y));ctx.lineTo(X(B.x),Y(B.y));ctx.stroke();
+    handle(A,"#7FD4A8");handle(B,"#7FD4A8");
+    ctx.fillStyle="#7FD4A8";ctx.font="12px "+mono;ctx.textAlign="left";ctx.fillText("A",X(A.x)+11,Y(A.y)-11);ctx.fillText("B",X(B.x)+11,Y(B.y)-11);
+    const nar=W*sc<640;txt("AB = "+Math.hypot(B.x-A.x,B.y-A.y).toFixed(1)+" cm",nar?X(0)+30:X(W)-30,Y(0)+(nar&&S.part===1?42:18),"#7FD4A8",nar?"left":"right");
+  }
+  if(S.pro&&PRO[S.part]){
+    const Q=PRO[S.part],V=Q.V,M=Q.M,N=Q.N,fg="#F2EEE3";
+    ctx.strokeStyle=fg;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(X(M.x),Y(M.y));ctx.lineTo(X(V.x),Y(V.y));ctx.lineTo(X(N.x),Y(N.y));ctx.stroke();
+    const a1=Math.atan2(M.y-V.y,M.x-V.x),a2=Math.atan2(N.y-V.y,N.x-V.x);let d=a2-a1;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
+    ctx.beginPath();ctx.arc(X(V.x),Y(V.y),26,a1,a1+d,d<0);ctx.stroke();
+    handle(V,fg);handle(M,fg);handle(N,fg);
+    const nar=W*sc<640;txt("∠ = "+(Math.abs(d)*180/Math.PI).toFixed(0)+"°",nar?X(0)+30:X(W/2),Y(0)+(nar?(S.ruler?42:18):18),fg,nar?"left":"center");
+  }
+}
+
+/* ---------- dragging ---------- */
+let drag=null;
+function handles(){const h=[];if(S.part===1)h.push(H1.P);if(S.ruler){h.push(RUL[S.part].A,RUL[S.part].B)}if(S.pro&&PRO[S.part]){const Q=PRO[S.part];h.push(Q.V,Q.M,Q.N)}return h}
+cv.addEventListener("pointerdown",e=>{
+  const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;let best=null,bd=30;
+  for(const p of handles()){const d=Math.hypot(X(p.x)-mx,Y(p.y)-my);if(d<bd){bd=d;best=p}}
+  if(best){drag={p:best,dx:X(best.x)-mx,dy:Y(best.y)-my};cv.setPointerCapture(e.pointerId);e.preventDefault()}
+});
+cv.addEventListener("pointermove",e=>{
+  if(!drag)return;const r=cv.getBoundingClientRect();
+  let x=(e.clientX-r.left+drag.dx-ox)/sc,y=(e.clientY-r.top+drag.dy-oy)/sc;
+  drag.p.x=Math.max(0,Math.min(W,x));drag.p.y=Math.max(0,Math.min(H,y));
+});
+const end=()=>{drag=null};cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
+
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+function chipRow(el,label,vals,key,fmt){
+  el.innerHTML="";const l=document.createElement("span");l.className="lbl";l.textContent=label;el.appendChild(l);
+  for(const v of vals){const b=document.createElement("button");b.className="chip"+(S[key]===v?" on":"");b.textContent=fmt?fmt(v):v;
+    b.onclick=()=>{S[key]=v;build();ui()};el.appendChild(b)}
+}
+function ui(){
+  const t=T[S.lang];
+  document.querySelectorAll("[data-k]").forEach(e=>{e.textContent=t[e.dataset.k]});
+  document.documentElement.lang=S.lang;document.title=t.title;
+  $("langBtn").textContent=S.lang==="en"?"ไทย":"EN";
+  document.querySelectorAll("[data-part]").forEach(b=>b.classList.toggle("on",+b.dataset.part===S.part));
+  chipRow($("rowF"),t.f,FS,"f");
+  const rx=$("rowX");
+  const chipsTo=(vals,key,fmt)=>{for(const v of vals){const b=document.createElement("button");b.className="chip"+(S[key]===v?" on":"");b.textContent=fmt?fmt(v):v;b.onclick=()=>{S[key]=v;build();ui()};rx.appendChild(b)}};
+  if(S.part===1)chipRow(rx,t.d,DS,"d");
+  else if(S.part===3)chipRow(rx,t.bar,[1,2,3,4,5],"pos");
+  else if(S.part===5){rx.innerHTML="";const l=document.createElement("span");l.className="lbl";l.textContent=t.depth;rx.appendChild(l);
+    ["deep","mid","shal"].forEach((k,i)=>{const b=document.createElement("button");b.className="chip"+(S.dp5===i?" on":"");b.textContent=t[k];b.style.fontFamily="inherit";b.onclick=()=>{S.dp5=i;build();ui()};rx.appendChild(b)})}
+  else if(S.part===4){chipRow(rx,t.ang,[1,2,3,4,5],"pos");const s=document.createElement("span");s.className="sep";rx.appendChild(s);
+    const l=document.createElement("span");l.className="lbl";l.textContent=t.dep;rx.appendChild(l);chipsTo(["A","B","C"],"dep")}
+  else{chipRow(rx,t.w,WS,"w");const s=document.createElement("span");s.className="sep";rx.appendChild(s);
+    for(const [n,k] of [[1,"single"],[2,"double"]]){const b=document.createElement("button");b.className="chip"+(S.gaps===n?" on":"");b.textContent=t[k];b.style.fontFamily="inherit";
+      b.onclick=()=>{S.gaps=n;build();ui()};rx.appendChild(b)}}
+  $("runBtn").textContent=S.run?t.freeze:t.run;
+  $("rulerBtn").classList.toggle("go",S.ruler);
+  $("proBtn").style.display=PRO[S.part]?"":"none";$("proBtn").classList.toggle("go",S.pro);
+  // teacher panel
+  const rv=$("rowV");rv.innerHTML="";
+  for(const v of VS){const b=document.createElement("button");b.className="chip"+(S.v===v?" on":"");b.textContent=v;b.onclick=()=>{S.v=v;build();ui()};rv.appendChild(b)}
+  $("nodalBtn").classList.toggle("on",S.nodal);
+  let h="<tr><th>f (Hz)</th><th>λ (cm)</th></tr>";
+  for(const f of FS)h+="<tr"+(f===S.f?' style="color:#7FD4A8"':"")+"><td>"+f+"</td><td>"+(vEff()/f).toFixed(2)+"</td></tr>";
+  $("ansTbl").innerHTML=h;
+  let h2="";
+  if(S.part===3){h2="<tr><th>"+t.pos+"</th><th>θᵢ = θᵣ</th></tr>";ANG.forEach((a,i)=>h2+="<tr"+(i+1===S.pos?' style="color:#7FD4A8"':"")+"><td>"+(i+1)+"</td><td>"+a+"°</td></tr>")}
+  if(S.part===4){const r=DEP[S.dep];h2="<tr><th>"+t.dep+" "+S.dep+"</th><th colspan=2>v₂/v₁ = λ₂/λ₁ = "+r+"</th></tr><tr><th>"+t.pos+"</th><th>θ₁</th><th>θ₂</th></tr>";
+    ANG.forEach((a,i)=>h2+="<tr"+(i+1===S.pos?' style="color:#7FD4A8"':"")+"><td>"+(i+1)+"</td><td>"+a+"°</td><td>"+(Math.asin(r*Math.sin(a*Math.PI/180))*180/Math.PI).toFixed(1)+"°</td></tr>")}
+  if(S.part===5){h2="<tr><th>"+t.depth+"</th><th>v (cm/s)</th></tr>";["deep","mid","shal"].forEach((k,i)=>h2+="<tr"+(i===S.dp5?' style="color:#7FD4A8"':"")+"><td>"+t[k]+"</td><td>"+(S.v*DP5[i]).toFixed(1)+"</td></tr>")}
+  $("ans2").innerHTML=h2;
+}
+document.querySelectorAll("[data-part]").forEach(b=>b.onclick=()=>{S.part=+b.dataset.part;build();ui()});
+$("langBtn").onclick=()=>{S.lang=S.lang==="en"?"th":"en";ui()};
+$("runBtn").onclick=()=>{S.run=!S.run;ui()};
+$("rulerBtn").onclick=()=>{S.ruler=!S.ruler;ui()};
+$("proBtn").onclick=()=>{S.pro=!S.pro;ui()};
+$("nodalBtn").onclick=()=>{S.nodal=!S.nodal;ui()};
+
+const mask=$("mask");
+$("tBtn").onclick=()=>{mask.classList.add("show");
+  if(S.teacher){$("pwBox").style.display="none";$("tBox").style.display="block"}
+  else{$("pwBox").style.display="block";$("tBox").style.display="none";$("pwIn").value="";$("pwMsg").textContent="";setTimeout(()=>$("pwIn").focus(),50)}};
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>mask.classList.remove("show"));
+function tryPw(){if(norm($("pwIn").value)===norm(getPw())){S.teacher=true;$("pwBox").style.display="none";$("tBox").style.display="block";ui()}else $("pwMsg").textContent=T[S.lang].wrong}
+$("pwOk").onclick=tryPw;$("pwIn").addEventListener("keydown",e=>{if(e.key==="Enter")tryPw()});
+$("linkGen").onclick=()=>{$("linkOut").value=location.href.split("?")[0].split("#")[0]+"?k="+enc({v:S.v})};
+$("linkCopy").onclick=()=>{const i=$("linkOut");if(!i.value)$("linkGen").onclick();i.select();
+  (navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).catch(()=>document.execCommand("copy"));
+  $("linkCopy").textContent=T[S.lang].copied;setTimeout(()=>$("linkCopy").textContent=T[S.lang].copy,1200)};
+$("cBtn").onclick=()=>{
+  const ok=$("cEmail").value.trim().toLowerCase()===ACC_E&&$("cPass").value===ACC_P&&$("cNew").value.trim().length>0;
+  if(!ok){$("cMsg").textContent=T[S.lang].bad;return}
+  try{localStorage.setItem(PWKEY,$("cNew").value.trim())}catch(e){}
+  $("cMsg").textContent=T[S.lang].saved;$("cEmail").value=$("cPass").value=$("cNew").value="";
+};
+
+window.addEventListener("resize",resize);
+build();ui();resize();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
